@@ -2,7 +2,7 @@
 Contributors: falselight
 Donate link: http://currencyrate.today/exchangerates-widget
 Tags: currency exchange, exchange rates, widget, dollar, forex
-Tested up to: 6.6
+Tested up to: 6.8
 Requires at least: 3.1
 Stable tag: 1.4.1
 Requires PHP: 5.3
