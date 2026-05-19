@@ -1,23 +1,34 @@
 <?php
+
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
 /**
- * @version 1.4.1
+ * @version 1.4.2
  */
 /*
     Plugin Name: Exchange Rates Widget
     Plugin URI: https://currencyrate.today/exchangerates-widget
-    Description: Simple and powerful currency exchange rates widget for your website or blog. Included <strong>190+ world currencies</strong> with <strong>popular cryptocurrencies</strong>. Updates each hour automatically. Multi Language support: English, Русский, Italiano, Français, Español, Deutsch, 中国.
-    Version: 1.4.1
+    Description: Beautiful live exchange rates widget for 190+ currencies, crypto, and metals. No API key needed.
+    Version: 1.4.2
     Author: CurrencyRate.today
     Author URI: https://currencyrate.today
     License: GPLv2 or later
-    Text Domain: erw_exchange_rates_widget
+    Text Domain: exchange-rates-widget
+    Requires at least: 3.1
+    Requires PHP: 5.3
+    Tested up to: 7.0
 */
 
 /*
     Load functions
 */
-require_once 'functions.php';
-require_once 'languages.php';
+require_once __DIR__ . '/functions.php';
+require_once __DIR__ . '/languages.php';
+if ( ! defined( 'ERW_PLUGIN_VERSION' ) ) {
+    define( 'ERW_PLUGIN_VERSION', '1.4.2' );
+}
 
 /*
     Init widget
@@ -33,7 +44,7 @@ function callback_erw_exchange_rates_widget($atts, $content = null)
 {
     $_lg = erw_return_language_detected();
 
-    extract(shortcode_atts(array(
+    $atts = shortcode_atts(array(
         'size_width' => '100%',
         'fm' => 'EUR',
         'to' => 'USD,GBP,AUD,CNY,JPY,RUB',
@@ -42,32 +53,34 @@ function callback_erw_exchange_rates_widget($atts, $content = null)
         'tz' => 0,
         'cd' => 0,
         'am' => 100,
-    ), $atts, 'erw_exchange_rates_widget'));
+    ), (array) $atts, 'erw_exchange_rates_widget');
 
+    $lg = erw_wrap_sanitize_text_field($atts['lg']);
     $lg = (empty($lg)) ? $_lg : ((in_array($lg, array_keys(erw_return_list_languages()))) ? $lg : 'en');
-    $fm = (empty($fm)) ? 'EUR' : $fm;
-    $to = (empty($to)) ? 'USD,GBP,AUD,CNY,JPY,RUB' : $to;
+    $fm = empty($atts['fm']) ? 'EUR' : erw_wrap_sanitize_text_field($atts['fm']);
+    $to = empty($atts['to']) ? 'USD,GBP,AUD,CNY,JPY,RUB' : erw_wrap_sanitize_text_field($atts['to']);
+    $st = erw_wrap_sanitize_text_field($atts['st']);
+    $tz = erw_wrap_sanitize_text_field($atts['tz']);
+    $cd = erw_wrap_sanitize_text_field($atts['cd']);
+    $am = erw_wrap_sanitize_text_field($atts['am']);
 
     $height = (90 + (count(explode(',', $to)) * 37));
     $params = array(
-      'fm' => $fm,
-      'to' => $to,
-      'st' => $st,
-      'lg' => $lg,
-      'tz' => $tz,
-      'cd' => $cd,
-      'am' => $am,
-      'wp' => 'erw_sc',
+        'fm' => esc_attr($fm),
+        'to' => esc_attr($to),
+        'st' => esc_attr($st),
+        'lg' => esc_attr($lg),
+        'tz' => esc_attr($tz),
+        'cd' => esc_attr($cd),
+        'am' => esc_attr($am),
+        'wp' => 'erw_sc',
     );
 
-    if (!isset($atts['size_width']) || is_valid_size($atts['size_width']) === false) {
-        $size_width = '100%';
-    } else {
-        $size_width = erw_wrap_sanitize_text_field($atts['size_width']);
-    }
+    $size_width = erw_wrap_sanitize_text_field($atts['size_width']);
+    $size_width = erw_is_valid_size($size_width) ? $size_width : '100%';
 
     $language = erw_widget_language($lg);
-    $output = erw_return_iframe($params, $size_width, $height, 1, $language['title']);
+    $output = erw_return_iframe($params, esc_attr($size_width), esc_attr($height), 1, esc_html($language['title']));
 
     return $output;
 }
@@ -79,6 +92,8 @@ add_shortcode('erw_exchange_rates_widget', 'callback_erw_exchange_rates_widget')
 */
 class erw_exchange_rates_widget extends WP_Widget
 {
+    private $allowed_tags = array();
+
     /*
         Register widget with WordPress.
     */
@@ -86,10 +101,40 @@ class erw_exchange_rates_widget extends WP_Widget
     {
         parent::__construct(
             'erw_exchange_rates_widget',
-            esc_html__('Exchange Rates Widget', 'erw_exchange_rates_widget'),
+            esc_html__('Exchange Rates Widget', 'exchange-rates-widget'),
             array(
-                'description' => esc_html__('Displays an exchange rates online.', 'erw_exchange_rates_widget'),
+                'description' => esc_html__('Displays exchange rates online.', 'exchange-rates-widget'),
             )
+        );
+
+        $this->allowed_tags = array(
+            'section' => array(
+                'id' => array(),
+                'class' => array(),
+            ),
+            'h2' => array(
+                'class' => array(),
+            ),
+            'div' => array(
+                'id' => array(),
+                'class' => array(),
+                'style' => array(),
+            ),
+            'iframe' => array(
+                'title' => array(),
+                'src' => array(),
+                'height' => array(),
+                'width' => array(),
+                'frameborder' => array(),
+                'scrolling' => array(),
+                'class' => array(),
+                'name' => array(),
+            ),
+            'p' => array(),
+            'a' => array(
+                'href' => array(),
+                'class' => array(),
+            ),
         );
     }
 
@@ -99,20 +144,36 @@ class erw_exchange_rates_widget extends WP_Widget
     public function update($new_instance, $old_instance)
     {
         $currency_list = erw_return_currency_list();
+        $new_instance = wp_parse_args(
+            (array) $new_instance,
+            array(
+                'fm' => 'EUR',
+                'to' => 'USD,GBP,AUD,CNY,JPY,RUB',
+                'lg' => erw_return_language_detected(),
+                'tz' => 0,
+                'st' => 'info',
+                'cd' => 0,
+                'am' => 100,
+                'title' => '',
+                'signature' => 0,
+                'size_width' => '100%',
+            )
+        );
 
-        $instance = $old_instance;
+        $instance = (array) $old_instance;
 
         $instance['fm'] = erw_wrap_sanitize_text_field($new_instance['fm']);
         $instance['to'] = erw_wrap_sanitize_text_field($new_instance['to']);
         $instance['lg'] = erw_wrap_sanitize_text_field($new_instance['lg']);
         $instance['tz'] = erw_wrap_sanitize_text_field($new_instance['tz']);
         $instance['st'] = erw_wrap_sanitize_text_field($new_instance['st']);
-        $instance['cd'] = erw_wrap_sanitize_text_field($new_instance['cd']);
+        $instance['cd'] = empty($new_instance['cd']) ? 0 : 1;
         $instance['am'] = erw_wrap_sanitize_text_field($new_instance['am']);
         $instance['title'] = erw_wrap_sanitize_text_field($new_instance['title']);
-        $instance['signature'] = erw_wrap_sanitize_text_field($new_instance['signature']);
+        $instance['signature'] = empty($new_instance['signature']) ? 0 : 1;
         $instance['size_width'] = erw_wrap_sanitize_text_field($new_instance['size_width']);
-        $instance['currency_name'] = (1 == $new_instance['cd']) ? $new_instance['fm'] : $currency_list[$new_instance['fm']];
+        $instance['size_width'] = erw_is_valid_size($instance['size_width']) ? $instance['size_width'] : '100%';
+        $instance['currency_name'] = (1 == $instance['cd']) ? $instance['fm'] : (isset($currency_list[$instance['fm']]) ? $currency_list[$instance['fm']] : $instance['fm']);
 
         return $instance;
     }
@@ -140,9 +201,7 @@ class erw_exchange_rates_widget extends WP_Widget
             'am' => 100,
         );
 
-        if (empty($instance)) {
-            $instance = $defaults;
-        }
+        $instance = wp_parse_args((array) $instance, $defaults);
 
         $currency_list = erw_return_currency_list();
 
@@ -162,10 +221,18 @@ class erw_exchange_rates_widget extends WP_Widget
 
         echo '<p><label for="',esc_attr($this->get_field_id('fm')),'">',esc_html($this->_lang('base_currency')),':',
              '<select id="',esc_attr($this->get_field_id('fm')),'" name="',esc_attr($this->get_field_name('fm')),'" style="width:100%">',
-             erw_print_select_options($fm, $currency_list, true),
+             wp_kses(
+                 erw_print_select_options($fm, $currency_list, true),
+                 array(
+                     'option' => array(
+                         'value' => array(),
+                         'selected' => array(),
+                     ),
+                 )
+             ),
              '</select></label></p>';
 
-        echo '<p><label for="',esc_attr($this->get_field_id('to')),'"><a href="https://currencyrate.today/different-currencies" target="_blank">',$this->_lang('сodes_currencies'),'</a> <small>(',$this->_lang('сodes_currencies_open'),')</small>:',
+        echo '<p><label for="',esc_attr($this->get_field_id('to')),'"><a href="',esc_url('https://currencyrate.today/different-currencies'),'" target="_blank" rel="noopener">',esc_html($this->_lang('сodes_currencies')),'</a> <small>(',esc_html($this->_lang('сodes_currencies_open')),')</small>:',
              '<input id="',esc_attr($this->get_field_id('to')),'" type="text" name="',esc_attr($this->get_field_name('to')),'" value="',esc_attr($to),'" style="width:100%"></label></p>';
 
         echo '<p><label for="',esc_attr($this->get_field_id('am')),'">',esc_html($this->_lang('amount')),':',
@@ -173,50 +240,82 @@ class erw_exchange_rates_widget extends WP_Widget
 
         echo '<p><label for="',esc_attr($this->get_field_id('lg')),'">',esc_html($this->_lang('language')),':',
              '<select id="',esc_attr($this->get_field_id('lg')),'" name="',esc_attr($this->get_field_name('lg')),'" style="width:100%">',
-             erw_print_select_options($lg, erw_return_list_languages()),
+             wp_kses(
+                 erw_print_select_options($lg, erw_return_list_languages()),
+                 array(
+                     'option' => array(
+                         'value' => array(),
+                         'selected' => array(),
+                     ),
+                 )
+             ),
              '</select></label></p>';
 
         echo '<p><label for="',esc_attr($this->get_field_id('tz')),'">',esc_html($this->_lang('timezone')),':',
              '<select id="',esc_attr($this->get_field_id('tz')),'" name="',esc_attr($this->get_field_name('tz')),'" style="width:100%">',
-             erw_print_timezone_list($tz, $this->_timezones),
+             wp_kses(
+                 erw_print_timezone_list($tz, $this->_timezones),
+                 array(
+                     'option' => array(
+                         'value' => array(),
+                         'selected' => array(),
+                     ),
+                 )
+             ),
              '</select></label></p>';
 
         echo '<p><label for="',esc_attr($this->get_field_id('st')),'">',esc_html($this->_lang('theme')),':',
              '<select id="',esc_attr($this->get_field_id('st')),'" name="',esc_attr($this->get_field_name('st')),'" style="width:100%">',
-             erw_print_select_options($st, $this->_lang('themes')),
+             wp_kses(
+                 erw_print_select_options($st, $this->_lang('themes')),
+                 array(
+                     'option' => array(
+                         'value' => array(),
+                         'selected' => array(),
+                     ),
+                 )
+             ),
              '</select></label></p>';
 
         echo '<p><label for="',esc_attr($this->get_field_id('size_width')),'">',esc_html($this->_lang('size_width')),':',
              '<select id="',esc_attr($this->get_field_id('size_width')),'" name="',esc_attr($this->get_field_name('size_width')),'" style="width:100%">',
-             erw_print_select_options($size_width, $this->_lang('sizes')),
+             wp_kses(
+                 erw_print_select_options($size_width, $this->_lang('sizes')),
+                 array(
+                     'option' => array(
+                         'value' => array(),
+                         'selected' => array(),
+                     ),
+                 )
+             ),
              '</select></label></p>';
 
         echo '<p><label for="',esc_attr($this->get_field_id('cd')),'">',
-             '<input type="checkbox" ',checked($cd, 1),' id="',esc_attr($this->get_field_id('cd')),'" name="',esc_attr($this->get_field_name('cd')),'" value="1">',
+             '<input type="checkbox" ',checked($cd, 1, false),' id="',esc_attr($this->get_field_id('cd')),'" name="',esc_attr($this->get_field_name('cd')),'" value="1">',
              esc_html($this->_lang('currency_code')),
              '</label></p>';
 
         echo '<p><label for="',esc_attr($this->get_field_id('signature')),'">',
-             '<input type="checkbox" ',checked($signature, 1),' id="',esc_attr($this->get_field_id('signature')),'" name="',esc_attr($this->get_field_name('signature')),'" value="1">',
+             '<input type="checkbox" ',checked($signature, 1, false),' id="',esc_attr($this->get_field_id('signature')),'" name="',esc_attr($this->get_field_name('signature')),'" value="1">',
              esc_html($this->_lang('signature')),
              '</label></p>';
 
         $widget_params = array(
-            'lg' => $lg,
-            'tz' => $tz,
-            'fm' => $fm,
-            'to' => $to,
-            'st' => $st,
-            'cd' => $cd,
-            'am' => $am,
-            'size_width' => $size_width,
-            'signature' => $signature,
+            'lg' => esc_attr($lg),
+            'tz' => esc_attr($tz),
+            'fm' => esc_attr($fm),
+            'to' => esc_attr($to),
+            'st' => esc_attr($st),
+            'cd' => esc_attr($cd),
+            'am' => esc_attr($am),
+            'size_width' => esc_attr($size_width),
+            'signature' => esc_attr($signature),
             'wp' => 'erw',
         );
 
         echo '<hr>',
              '<div><h3>',esc_html($this->_lang('preview')),'</h3>',
-             $this->_output_widget($widget_params, $size_width),
+             wp_kses($this->_output_widget($widget_params, esc_attr($size_width)), $this->allowed_tags),
              '</div>';
 
         $short_attrs = '';
@@ -227,7 +326,7 @@ class erw_exchange_rates_widget extends WP_Widget
 
         echo '<hr>',
              '<div><h3>',esc_html($this->_lang('generated_shortcode')),'</h3>',
-             '<textarea onclick="this.select()" style="width:100%;height:80px;">[erw_exchange_rates_widget ',trim($short_attrs),'][/erw_exchange_rates_widget]</textarea></div>',
+             '<textarea onclick="this.select()" style="width:100%;height:80px;">[erw_exchange_rates_widget ',esc_html(trim($short_attrs)),'][/erw_exchange_rates_widget]</textarea></div>',
              '<hr>';
     }
 
@@ -236,14 +335,39 @@ class erw_exchange_rates_widget extends WP_Widget
     */
     public function widget($args, $instance)
     {
-        // Register style
-        wp_register_style('erw-exchange-rates-widget', plugin_dir_url(__FILE__).'assets/frontend.css');
-        wp_enqueue_style('erw-exchange-rates-widget', plugin_dir_url(__FILE__).'assets/frontend.css');
+        $args = wp_parse_args(
+            (array) $args,
+            array(
+                'before_widget' => '',
+                'after_widget' => '',
+                'before_title' => '',
+                'after_title' => '',
+            )
+        );
 
-        // Get values
-        extract($args);
+        $instance = wp_parse_args(
+            (array) $instance,
+            array(
+                'fm' => 'EUR',
+                'to' => 'USD,GBP,AUD,CNY,JPY,RUB',
+                'lg' => erw_return_language_detected(),
+                'tz' => 0,
+                'st' => 'info',
+                'cd' => 0,
+                'am' => 100,
+                'title' => '',
+                'signature' => 1,
+                'size_width' => '100%',
+            )
+        );
 
-        $currency_list = erw_return_currency_list();
+        wp_register_style(
+            'erw-exchange-rates-widget',
+            plugin_dir_url(__FILE__).'assets/frontend.css',
+            array(),
+            ERW_PLUGIN_VERSION
+        );
+        wp_enqueue_style('erw-exchange-rates-widget');
 
         $lg = erw_wrap_sanitize_text_field($instance['lg']);
         $tz = erw_wrap_sanitize_text_field($instance['tz']);
@@ -256,31 +380,41 @@ class erw_exchange_rates_widget extends WP_Widget
         $signature = erw_wrap_sanitize_text_field($instance['signature']);
         $size_width = erw_wrap_sanitize_text_field($instance['size_width']);
 
-        //$target_url = strtolower('http://'.$fm.(('en' != $lg) ? '.'.$lg : '').'.currencyrate.today');
-        echo $args['before_widget'];
+        echo wp_kses_post($args['before_widget']);
 
-        // Title
-        echo $args['before_title'].$title.$args['after_title'];
+        if (!empty($title)) {
+            echo wp_kses_post($args['before_title']).esc_html($title).wp_kses_post($args['after_title']);
+        }
 
         // Load language
-        $_langs = ['en'=>'en', 'fr'=>'fr', 'ru'=>'ru', 'id'=>'id', 'it'=>'it', 'de'=>'de', 'hi'=>'hi', 'pt'=>'pt', 'ja'=>'ja', 'es'=>'es', 'zh'=>'cn'];
-		$_lg = strstr(get_locale(), '_', true);
-		$_lg = (isset($_langs[$_lg])) ? $_langs[$_lg] : 'en';
+        $_langs = array(
+            'en'=>'en', 'fr'=>'fr', 'ru'=>'ru', 'id'=>'id', 'it'=>'it', 'de'=>'de',
+            'hi'=>'hi', 'pt'=>'pt', 'ja'=>'ja', 'es'=>'es', 'zh'=>'cn'
+        );
+        $_lg = strstr(get_locale(), '_', true);
+        $_lg = (isset($_langs[$_lg])) ? $_langs[$_lg] : 'en';
         $language = erw_widget_language($_lg);
 
         // Output
-        echo $this->_output_widget(array(
-            'lg' => $lg,
-            'tz' => $tz,
-            'fm' => $fm,
-            'to' => $to,
-            'st' => $st,
-            'cd' => $cd,
-            'am' => $am,
-            'wp' => 'erw',
-        ), $size_width, $signature, $language['title']);
+        $output = $this->_output_widget(
+            array(
+                'lg' => esc_attr($lg),
+                'tz' => esc_attr($tz),
+                'fm' => esc_attr($fm),
+                'to' => esc_attr($to),
+                'st' => esc_attr($st),
+                'cd' => esc_attr($cd),
+                'am' => esc_attr($am),
+                'wp' => 'erw',
+            ),
+            esc_attr($size_width),
+            esc_attr($signature),
+            esc_html($language['title'])
+        );
 
-        echo $args['after_widget'];
+        echo wp_kses($output, $this->allowed_tags);
+
+        echo wp_kses_post($args['after_widget']);
     }
 
     // Private
@@ -340,6 +474,6 @@ class erw_exchange_rates_widget extends WP_Widget
     {
         $_erw_widget_language = erw_widget_language(erw_return_language_detected());
 
-        return $_erw_widget_language[$value];
+        return isset($_erw_widget_language[$value]) ? $_erw_widget_language[$value] : '';
     }
 }

@@ -1,7 +1,11 @@
 <?php
 
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
 /**
- * @version 1.4.1
+ * @version 1.4.2
  */
 
 function erw_return_list_languages()
@@ -28,13 +32,12 @@ function erw_return_language_detected()
     return (in_array($sl, array_keys(erw_return_list_languages()))) ? $sl : 'en';
 }
 
-function is_valid_size($size) {
-    // Check for any pixel value (e.g., "100px", "220px")
+function erw_is_valid_size($size)
+{
     if (preg_match('/^\d+px$/', $size)) {
         return true;
     }
 
-    // Check for percentage values between 0% and 100%
     if (preg_match('/^\d+%$/', $size, $matches)) {
         $percentageValue = intval($matches[0]);
         if ($percentageValue >= 0 && $percentageValue <= 100) {
@@ -48,21 +51,37 @@ function is_valid_size($size) {
 
 function erw_return_currency_list()
 {
-    $contents = file_get_contents(plugin_dir_path(__FILE__).'data/currencies_'.erw_return_language_detected().'.json');
+    $file = plugin_dir_path(__FILE__).'data/currencies_'.erw_return_language_detected().'.json';
 
-    return json_decode($contents, true);
+    if (!is_readable($file)) {
+        return array();
+    }
+
+    $contents = file_get_contents($file);
+    if (false === $contents) {
+        return array();
+    }
+
+    $currencies = json_decode($contents, true);
+
+    return is_array($currencies) ? $currencies : array();
 }
 
-function erw_wrap_sanitize_text_field($sanitized_value) {
+function erw_wrap_sanitize_text_field($sanitized_value)
+{
+    if (is_array($sanitized_value) || is_object($sanitized_value)) {
+        return '';
+    }
+
+    $sanitized_value = sanitize_text_field((string) $sanitized_value);
     $sanitized_value = preg_replace('/[()]/', '', $sanitized_value);
-    // Escape the attribute value for safe output
-    $escaped_value = esc_attr($sanitized_value);
+
     return $sanitized_value;
 }
 
 function erw_return_iframe($params, $width, $height, $signature = null, $text = null)
 {
-    if (is_valid_size($width) === false) {
+    if (erw_is_valid_size($width) === false) {
         $width = '100%';
     }
 
@@ -84,10 +103,10 @@ function erw_print_timezone_list($code, $arr)
     $output_string = '';
     $code = esc_attr($code);
     foreach ($arr as $v) {
-        $output_string .= '<option value="'.esc_attr($v[0]).'"'.(($code == esc_attr($v[0])) ? ' selected' : '').'>'.esc_html($v[1]).'</option>'.PHP_EOL;
+        $output_string .= '<option value="'.esc_attr($v[0]).'"'.(($code === esc_attr($v[0])) ? ' selected' : '').'>'.esc_html($v[1]).'</option>'.PHP_EOL;
     }
 
-    echo $output_string;
+    return $output_string;
 }
 
 function erw_print_select_options($code, $arr, $o = false)
@@ -95,8 +114,8 @@ function erw_print_select_options($code, $arr, $o = false)
     $output_string = '';
     $code = esc_attr($code);
     foreach ($arr as $k => $v) {
-        $output_string .= '<option value="'.esc_attr($k).'"'.(($code == esc_attr($k)) ? ' selected' : '').'>'.((true === $o) ? esc_html($k.' - '.$v) : esc_html($v)).'</option>'.PHP_EOL;
+        $output_string .= '<option value="'.esc_attr($k).'"'.(($code === esc_attr($k)) ? ' selected' : '').'>'.((true === $o) ? esc_html($k.' - '.$v) : esc_html($v)).'</option>'.PHP_EOL;
     }
 
-    echo $output_string;
+    return $output_string;
 }
