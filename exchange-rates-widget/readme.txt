@@ -3,9 +3,9 @@ Contributors: falselight
 Tags: currency exchange, exchange rates, widget, dollar, forex
 Donate link: https://currencyrate.today/exchangerates-widget
 Requires at least: 3.1
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 5.3
-Stable tag: 1.4.2
+Stable tag: 1.4.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -164,10 +164,13 @@ No. The plugin currently supports shortcodes and classic widgets. In the block e
 
 == Upgrade Notice ==
 
-= 1.4.2 =
-WordPress 7 compatibility metadata and runtime safety cleanup. Existing shortcodes and classic widget settings continue to work.
+= 1.4.3 =
+Verified compatibility with WordPress 7.1. Existing shortcodes and classic widget settings continue to work.
 
 == Changelog ==
+
+= 1.4.3 =
+* Verified compatibility with WordPress 7.1.
 
 = 1.4.2 =
 * Verified WordPress 7 compatibility with Classic Widgets.
