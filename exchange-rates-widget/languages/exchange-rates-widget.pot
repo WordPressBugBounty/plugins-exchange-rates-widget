@@ -1,0 +1,45 @@
+# Copyright (C) 2026 CurrencyRate.today
+# This file is distributed under the GPLv2 or later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Exchange Rates Widget 1.4.4\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/exchange-rates-widget\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-08-20T07:08:09+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: exchange-rates-widget\n"
+
+#. Plugin Name of the plugin
+#: widget_init.php
+#: widget_init.php:105
+msgid "Exchange Rates Widget"
+msgstr ""
+
+#. Plugin URI of the plugin
+#: widget_init.php
+msgid "https://currencyrate.today/exchangerates-widget"
+msgstr ""
+
+#. Description of the plugin
+#: widget_init.php
+msgid "Beautiful live exchange rates widget for 190+ currencies, crypto, and metals. No API key needed."
+msgstr ""
+
+#. Author of the plugin
+#: widget_init.php
+msgid "CurrencyRate.today"
+msgstr ""
+
+#. Author URI of the plugin
+#: widget_init.php
+msgid "https://currencyrate.today"
+msgstr ""
+
+#: widget_init.php:107
+msgid "Displays exchange rates online."
+msgstr ""

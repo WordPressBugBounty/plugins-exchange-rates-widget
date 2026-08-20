@@ -5,17 +5,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * @version 1.4.3
+ * @version 1.4.4
  */
 /*
     Plugin Name: Exchange Rates Widget
     Plugin URI: https://currencyrate.today/exchangerates-widget
     Description: Beautiful live exchange rates widget for 190+ currencies, crypto, and metals. No API key needed.
-    Version: 1.4.3
+    Version: 1.4.4
     Author: CurrencyRate.today
     Author URI: https://currencyrate.today
     License: GPLv2 or later
     Text Domain: exchange-rates-widget
+    Domain Path: /languages
     Requires at least: 3.1
     Requires PHP: 5.3
     Tested up to: 7.1
@@ -27,7 +28,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 require_once __DIR__ . '/functions.php';
 require_once __DIR__ . '/languages.php';
 if ( ! defined( 'ERW_PLUGIN_VERSION' ) ) {
-    define( 'ERW_PLUGIN_VERSION', '1.4.3' );
+    define( 'ERW_PLUGIN_VERSION', '1.4.4' );
 }
 
 /*
